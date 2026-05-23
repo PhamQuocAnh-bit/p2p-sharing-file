@@ -1,5 +1,6 @@
 package com.p2p.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.p2p.dto.peer.PeerInfo;
 import com.p2p.dto.tracker.RegisterRequest;
 import com.p2p.message.Message;
 import com.p2p.service.TrackerService;
@@ -34,7 +35,33 @@ public class TrackerController {
                 case PEER_LIST:
                     String fileName =
                             mapper.convertValue(message.getPayload(), String.class);
+                    if(fileName == null || fileName.isEmpty()) {
+                        return ResponseEntity.ok(service.getAllPeers());
+                    }
                     return ResponseEntity.ok(service.getPeers(fileName));
+                case HEARTBEAT:
+                    PeerInfo peer =
+                            mapper.convertValue(message.getPayload(), PeerInfo.class);
+                    service.heartbeat(peer);
+                    return ResponseEntity.ok("ALIVE");
+                case UNREGISTER:
+                    PeerInfo peers =
+                            mapper.convertValue(message.getPayload(), PeerInfo.class);
+
+                    service.unregister(peers);
+                    return ResponseEntity.ok("REMOVED");
+                case GET_ALL_PEERS:
+                    return ResponseEntity.ok(service.getAllPeers());
+                case CHUNK_DISTRIBUTION:
+                    String targetFile =
+                            mapper.convertValue(message.getPayload(), String.class);
+
+                    return ResponseEntity.ok(service.getChunkDistribution(targetFile));
+
+                case ALL_FILE_DISTRIBUTION:
+                    return ResponseEntity.ok(service.getAllFileDistribution());
+
+
 
                 default:
                     return ResponseEntity.badRequest().body("Unknown Message_Type");

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>P2P System</title>
+    <style>
+        body { font-family: Arial; text-align: center; }
+        .hidden { display: none; }
+        button { margin: 5px; padding: 8px 15px; }
+        input { padding: 5px; margin: 5px; }
+        .box { border: 1px solid #ccc; padding: 20px; width: 400px; margin: auto; margin-top: 50px; }
+    </style>
+</head>
+
+<body>
+
+<!-- ================= JOIN ================= -->
+<div id="join" class="box">
+    <h2>Join Network</h2>
+    <input id="ip" value="127.0.0.1" placeholder="IP"><br>
+    <input id="port" value="5000" placeholder="Port"><br>
+    <button onclick="join()">Join</button>
+</div>
+
+<!-- ================= HOME ================= -->
+<div id="home" class="box hidden">
+    <h2>Home</h2>
+    <button onclick="show('upload')">Upload</button>
+    <button onclick="show('download')">Download</button>
+    <button onclick="show('history')">History</button>
+    <button onclick="logout()">Logout</button>
+</div>
+
+<!-- ================= UPLOAD ================= -->
+<div id="upload" class="box hidden">
+    <h2>Upload</h2>
+    <input type="file" id="file"><br>
+    <button onclick="upload()">Upload</button>
+    <button onclick="show('home')">Back</button>
+</div>
+
+<!-- ================= DOWNLOAD ================= -->
+<div id="download" class="box hidden">
+    <h2>Download</h2>
+
+    <input id="fileName" placeholder="Enter file name">
+    <button onclick="search()">Search</button>
+
+    <h3>Peers:</h3>
+    <ul id="peerList"></ul>
+
+    <h3>Chunks:</h3>
+    <div id="chunks"></div>
+
+    <button onclick="download()">Download</button>
+    <button onclick="show('home')">Back</button>
+</div>
+
+<!-- ================= HISTORY ================= -->
+<div id="history" class="box hidden">
+    <h2>History</h2>
+    <ul id="historyList"></ul>
+    <button onclick="show('home')">Back</button>
+</div>
+
+<script>
+
+    let currentPeer = {};
+    let history = [];
+
+    // ================= UI CONTROL =================
+    function show(page) {
+      document.querySelectorAll('.box').forEach(d => d.classList.add('hidden'));
+      document.getElementById(page).classList.remove('hidden');
+    }
+
+    // ================= JOIN =================
+    async function join() {
+      const ip = document.getElementById("ip").value;
+      const port = parseInt(document.getElementById("port").value);
+
+      currentPeer = { ip, port };
+
+      await fetch("http://localhost:8080/tracker/message", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          type: "REGISTER",
+          payload: {
+            peer: currentPeer,
+            fileName: "",
+            chunks: []
+          }
+        })
+      });
+
+      show("home");
+    }
+
+    // ================= LOGOUT =================
+    function logout() {
+      currentPeer = {};
+      show("join");
+    }
+
+    // ================= UPLOAD =================
+    async function upload() {
+      const fileInput = document.getElementById("file");
+      const file = fileInput.files[0];
+
+      if (!file) return alert("Choose file!");
+
+      // giả lập upload (bạn cần API backend)
+      alert("Uploaded: " + file.name);
+
+      history.push("Upload: " + file.name);
+    }
+
+    // ================= SEARCH FILE =================
+    async function search() {
+      const fileName = document.getElementById("fileName").value;
+
+      // lấy peer list
+      const res = await fetch("http://localhost:8080/tracker/message", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          type: "PEER_LIST",
+          payload: fileName
+        })
+      });
+
+      const peers = await res.json();
+
+      const list = document.getElementById("peerList");
+      list.innerHTML = "";
+
+      peers.forEach(p => {
+        const li = document.createElement("li");
+        li.innerText = p.ip + ":" + p.port;
+        list.appendChild(li);
+      });
+
+      // lấy chunk distribution
+      try {
+        const chunkRes = await fetch("http://localhost:8080/chunks?fileName=" + fileName);
+        const chunks = await chunkRes.json();
+
+        const div = document.getElementById("chunks");
+        div.innerHTML = "";
+
+        for (let peer in chunks) {
+          const p = document.createElement("div");
+          p.innerHTML = "<b>" + peer + "</b>: " + chunks[peer].join(", ");
+          div.appendChild(p);
+        }
+
+      } catch (e) {
+        console.log("No chunk API");
+      }
+    }
+
+    // ================= DOWNLOAD =================
+    async function download() {
+      const fileName = document.getElementById("fileName").value;
+
+      alert("Downloading: " + fileName);
+
+      history.push("Download: " + fileName);
+    }
+
+    // ================= HISTORY =================
+    setInterval(() => {
+      const list = document.getElementById("historyList");
+      list.innerHTML = "";
+
+      history.forEach(h => {
+        const li = document.createElement("li");
+        li.innerText = h;
+        list.appendChild(li);
+      });
+    }, 1000);
+
+</script>
+
+</body>
+</html>

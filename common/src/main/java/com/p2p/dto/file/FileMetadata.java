@@ -7,6 +7,7 @@ public class FileMetadata {
     private long fileSize;
     private int totalChunks;
     private List<String> chunkHashes;
+    private int chunkSize;
 
     public String getFileName() {
         return fileName;
@@ -38,5 +39,13 @@ public class FileMetadata {
 
     public void setChunkHashes(List<String> chunkHashes) {
         this.chunkHashes = chunkHashes;
+    }
+
+    public int getChunkSize() {
+        return chunkSize;
+    }
+
+    public void setChunkSize(int chunkSize) {
+        this.chunkSize = chunkSize;
     }
 }

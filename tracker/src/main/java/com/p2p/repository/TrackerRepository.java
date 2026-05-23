@@ -12,6 +12,13 @@ public interface TrackerRepository {
     void register(RegisterRequest registerRequest);
     List<PeerInfo> getPeers(String fileName);
     Map<PeerInfo,List<Integer>>  getChunkDistribution(String fileName);
+    List<PeerInfo> getAllPeers();
+    Map<String, Map<PeerInfo, List<Integer>>> getAllFileDistribution();
+
+    void heartbeat(PeerInfo peer);
+    void unregister(PeerInfo peer);
+
+
 
 
 }

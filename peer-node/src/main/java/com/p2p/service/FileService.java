@@ -12,7 +12,12 @@ import java.util.List;
 
 public class FileService {
     private static final int CHUNK_SIZE = 100 * 1024; // 1mb
-    private final ChunkService chunkService = new ChunkService();
+//    private final ChunkService chunkService = new ChunkService();
+    private final ChunkService chunkService;
+
+    public FileService(ChunkService chunkService) {
+        this.chunkService = chunkService;
+    }
 
     public FileMetadata splitFile(String filePath) throws IOException {
         File file = new File(filePath);
@@ -42,6 +47,8 @@ public class FileService {
         metadata.setFileSize(fileSize);
         metadata.setTotalChunks(totalChunks);
         metadata.setChunkHashes(chunkHashes);
+        metadata.setChunkSize(CHUNK_SIZE);
+        chunkService.saveMetadata(metadata);
 
         return metadata;
     }
