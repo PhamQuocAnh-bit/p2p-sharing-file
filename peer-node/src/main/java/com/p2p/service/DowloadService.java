@@ -14,9 +14,11 @@ import com.p2p.message.MessageType;
 import com.p2p.network.PeerClient;
 import com.p2p.tracker.TrackerClient;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.concurrent.*;
 import java.util.*;
+import java.util.function.Consumer;
 
 import java.lang.reflect.Executable;
 import java.util.List;
@@ -27,6 +29,21 @@ public class DowloadService {
     private ObjectMapper mapper = new ObjectMapper();
     private ChunkService chunkService;
     private int myPort;
+
+
+    private Consumer<String> progressCallback;
+
+    public void setProgressCallback(Consumer<String> progressCallback) {
+        this.progressCallback = progressCallback;
+    }
+
+    private void updateProgress(String text) {
+        System.out.println(text);
+
+        if (progressCallback != null) {
+            progressCallback.accept(text);
+        }
+    }
 
     public  DowloadService(ChunkService chunkService, int myPort) {
         this.chunkService = chunkService;
@@ -88,11 +105,7 @@ public class DowloadService {
         List<Integer> chunksToDownload = new ArrayList<>();
 
         if (selectedChunks == null || selectedChunks.isEmpty()) {
-            // ✅ MODE FULL
             System.out.println("Mode: FULL DOWNLOAD");
-
-
-
             for (int i = 0; i < totalChunks; i++) {
                 if (chunkMap.containsKey(i)) {
                     chunksToDownload.add(i);
@@ -100,18 +113,13 @@ public class DowloadService {
             }
 
         } else {
-            // ✅ MODE PARTIAL
+
             System.out.println("Mode: PARTIAL DOWNLOAD");
             for(int c : selectedChunks) {
                 if(c>=0 && c< totalChunks && chunkMap.containsKey(c)) {
                     chunksToDownload.add(c);
                 }
             }
-
-
-
-
-
             if (chunksToDownload.isEmpty()) {
                 System.out.println("No valid chunks to download");
                 return;
@@ -207,9 +215,25 @@ public class DowloadService {
                 new FileAssemblerService(chunkService);
 
         String outputPath = "output_" + fileName;
+        if (hasAllChunks(fileName, totalChunks)) {
+            assembler.mergeAndVerify(fileName, outputPath);
+        } else {
+            System.out.println("Not enough chunks and skip merge");
+        }
 
-        assembler.mergeAndVerify(fileName, outputPath);
 
+    }
+    private boolean hasAllChunks(String fileName, int totalChunks) {
+        List<Integer> chunks = chunkService.getAvailableChunks(fileName);
+
+        for (int i = 0; i < totalChunks; i++) {
+            if (!chunks.contains(i)) {
+                System.out.println("Missing chunk " + i);
+                return false;
+            }
+        }
+
+        return true;
     }
 
 
@@ -236,30 +260,100 @@ public class DowloadService {
                 Message<RequestChunk> msg =
                         new Message<>(MessageType.REQUEST_CHUNK, req);
 
+//                Message<?> response =
+//                        peerClient.send(peer.getIp(), peer.getPort(), msg);
+//
+//                if (response != null && response.getType() == MessageType.SEND_CHUNK) {
+//
+//                    SendChunk send =
+//                            mapper.convertValue(response.getPayload(), SendChunk.class);
+//
+//
+//
+//                    chunkService.saveChunk(fileName, chunkIndex, send.getData());
+//
+//                    registerChunkToTracker(fileName, chunkIndex);
+//
+//
+//                    sendHaveChunk(fileName,chunkIndex,peers);
+//
+//
+//
+//                    System.out.println("Downloaded chunk " + chunkIndex +
+//                            " from " + peer.getPort());
+//
+//                    return; // SUCCESS → stop retry
+//
+//                }
+
+                // old + thong ke toc do dowload
+                long startTime = System.nanoTime();
+
+                final boolean[] downloading = {true};
+
+                Thread fakeProgress = new Thread(() -> {
+
+                    int fakePercent = 0;
+
+                    while (downloading[0] && fakePercent < 95) {
+
+                        try {
+                            Thread.sleep(120);
+                        } catch (Exception ignored) {}
+
+                        fakePercent += 5;
+
+                        updateProgress(
+                                "Downloading chunk " + chunkIndex +
+                                        " from peer " + peer.getPort() +
+                                        " | Progress: " + fakePercent + "%" +
+                                        " | Speed: calculating..."
+                        );
+                    }
+                });
+
+                fakeProgress.start();
+
                 Message<?> response =
                         peerClient.send(peer.getIp(), peer.getPort(), msg);
+
+                long endTime = System.nanoTime();
+
+                downloading[0] = false;
+                try {
+                    fakeProgress.join();
+                } catch (Exception ignored) {}
 
                 if (response != null && response.getType() == MessageType.SEND_CHUNK) {
 
                     SendChunk send =
                             mapper.convertValue(response.getPayload(), SendChunk.class);
 
+                    byte[] data = send.getData();
 
+                    double seconds =
+                            (endTime - startTime) / 1_000_000_000.0;
 
-                    chunkService.saveChunk(fileName, chunkIndex, send.getData());
+                    double sizeKB =
+                            data.length / 1024.0;
+
+                    double speedKBps =
+                            sizeKB / seconds;
+
+                    chunkService.saveChunk(fileName, chunkIndex, data);
 
                     registerChunkToTracker(fileName, chunkIndex);
 
+                    sendHaveChunk(fileName, chunkIndex, peers);
 
-                    sendHaveChunk(fileName,chunkIndex,peers);
+                    updateProgress(String.format(
+                            "Downloaded chunk %d from peer %d | Progress: 100%% | Speed: %.2f KB/s",
+                            chunkIndex,
+                            peer.getPort(),
+                            speedKBps
+                    ));
 
-
-
-                    System.out.println("Downloaded chunk " + chunkIndex +
-                            " from " + peer.getPort());
-
-                    return; // SUCCESS → stop retry
-
+                    return;
                 }
 
             }

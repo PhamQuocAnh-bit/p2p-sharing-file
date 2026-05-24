@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class FileService {
-    private static final int CHUNK_SIZE = 100 * 1024; // 1mb
+    private static final int CHUNK_SIZE = 10000 * 1024; // 1mb
 //    private final ChunkService chunkService = new ChunkService();
     private final ChunkService chunkService;
 

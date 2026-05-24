@@ -192,6 +192,8 @@ public class PeerUI {
 
         private final JLabel selectedFileLabel = new JLabel("Chưa chọn file");
         private File selectedFile;
+        private final JLabel downloadStatus =
+                new JLabel("Waiting download...");
 
         DashboardFrame(String ip, int port) {
             this.ip = ip;
@@ -808,10 +810,16 @@ public class PeerUI {
                 onePeer.add(selectedPeer.peer);
 
                 DowloadService service = new DowloadService(chunkService, port);
+
+                service.setProgressCallback(text ->
+                        SwingUtilities.invokeLater(() ->
+                                log(text, LOG_GREEN)
+                        )
+                );
+
                 service.dowload(currentSearchFile, onePeer, selectedChunks);
 
                 statusLabel.setText("DOWNLOADED");
-                log("Downloaded chunk " + chunkIndex + " from peer " + selectedPeer.peer.getPort(), LOG_GREEN);
                 showSuccess(this, "Download chunk " + chunkIndex + " hoàn tất");
 
             } catch (Exception e) {
@@ -850,10 +858,16 @@ public class PeerUI {
                 }
 
                 DowloadService service = new DowloadService(chunkService, port);
+
+                service.setProgressCallback(text ->
+                        SwingUtilities.invokeLater(() ->
+                                log(text, LOG_GREEN)
+                        )
+                );
+
                 service.dowload(currentSearchFile, currentSearchPeers, missingChunks);
 
                 statusLabel.setText("DOWNLOADED");
-                log("Download all missing chunks: " + missingChunks, LOG_GREEN);
                 showSuccess(this, "Download all chunk còn thiếu hoàn tất");
 
             } catch (Exception e) {
