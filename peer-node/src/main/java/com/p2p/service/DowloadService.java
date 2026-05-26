@@ -197,9 +197,13 @@ public class DowloadService {
         int THREADS = Math.min(10, chunksToDownload.size());
         ExecutorService executor = Executors.newFixedThreadPool(THREADS);
 
-        for (int chunkIndex : chunksToDownload) {
+        List<Future<Boolean>> futures = new ArrayList<>();
 
-            executor.submit(() -> downloadChunk(fileName, chunkIndex, chunkMap,peers));
+        for (int chunkIndex : chunksToDownload) {
+            Future<Boolean> future =
+                    executor.submit(() -> downloadChunk(fileName, chunkIndex, chunkMap, peers));
+
+            futures.add(future);
         }
 
         executor.shutdown();
@@ -210,15 +214,33 @@ public class DowloadService {
             e.printStackTrace();
         }
 
-        System.out.println("DONE DOWNLOAD");
+        boolean allSuccess = true;
+
+        for (Future<Boolean> future : futures) {
+            try {
+                if (!future.get()) {
+                    allSuccess = false;
+                }
+            } catch (Exception e) {
+                allSuccess = false;
+            }
+        }
+
+        if (allSuccess) {
+            updateProgress("DOWNLOAD SUCCESS");
+        } else {
+            updateProgress("DOWNLOAD FAILED");
+        }
+
         FileAssemblerService assembler =
                 new FileAssemblerService(chunkService);
 
         String outputPath = "output_" + fileName;
-        if (hasAllChunks(fileName, totalChunks)) {
+
+        if (allSuccess && hasAllChunks(fileName, totalChunks)) {
             assembler.mergeAndVerify(fileName, outputPath);
         } else {
-            System.out.println("Not enough chunks and skip merge");
+            updateProgress("Not enough valid chunks, skip merge");
         }
 
 
@@ -239,14 +261,14 @@ public class DowloadService {
 
     //5. dowload  1 chunk
 
-    private void downloadChunk(String fileName,
+    private boolean downloadChunk(String fileName,
                                int chunkIndex,
                                Map<Integer,List<PeerInfo>> chunkMap,
                                List<PeerInfo> peers) {
         List<PeerInfo> peerList = chunkMap.get(chunkIndex);
         if(peerList == null || peerList.isEmpty()) {
             System.out.println("No Peer has chunk " + chunkIndex);
-            return ;
+            return false;
         }
         // random peer
         List<PeerInfo> candidates = new ArrayList<>(peerList);
@@ -340,6 +362,52 @@ public class DowloadService {
                     double speedKBps =
                             sizeKB / seconds;
 
+                    FileMetadata metadata = chunkService.getMetadata(fileName);
+
+                    if (metadata == null) {
+                        updateProgress("No metadata found, cannot verify chunk " + chunkIndex);
+                        return false;
+                    }
+
+                    String expectedHash =
+                            metadata.getChunkHashes().get(chunkIndex);
+
+                    String actualHash =
+                            md5(data);
+
+                    updateProgress(
+                            "Checking integrity for chunk "
+                                    + chunkIndex
+                    );
+
+                    updateProgress(
+                            "Expected hash: "
+                                    + expectedHash
+                    );
+
+                    updateProgress(
+                            "Actual hash:   "
+                                    + actualHash
+                    );
+
+                    if (!expectedHash.equals(actualHash)) {
+
+                        updateProgress(
+                                "Integrity FAILED for chunk "
+                                        + chunkIndex
+                                        + " from peer "
+                                        + peer.getPort()
+                                        + " | retry another peer..."
+                        );
+
+                        continue;
+                    }
+
+                    updateProgress(
+                            "Integrity OK for chunk "
+                                    + chunkIndex
+                    );
+
                     chunkService.saveChunk(fileName, chunkIndex, data);
 
                     registerChunkToTracker(fileName, chunkIndex);
@@ -347,13 +415,13 @@ public class DowloadService {
                     sendHaveChunk(fileName, chunkIndex, peers);
 
                     updateProgress(String.format(
-                            "Downloaded chunk %d from peer %d | Progress: 100%% | Speed: %.2f KB/s",
+                            "Downloaded + verified chunk %d from peer %d | Progress: 100%% | Speed: %.2f KB/s",
                             chunkIndex,
                             peer.getPort(),
                             speedKBps
                     ));
 
-                    return;
+                    return true;
                 }
 
             }
@@ -361,7 +429,27 @@ public class DowloadService {
                 System.out.println("Retry chunk " + chunkIndex + " .....");
             }
         }
-        System.out.println("FAILED chunk " + chunkIndex);
+        updateProgress("FAILED chunk " + chunkIndex);
+        return false;
+    }
+    private String md5(byte[] data) {
+        try {
+            java.security.MessageDigest digest =
+                    java.security.MessageDigest.getInstance("MD5");
+
+            byte[] hash = digest.digest(data);
+
+            StringBuilder sb = new StringBuilder();
+
+            for (byte b : hash) {
+                sb.append(String.format("%02x", b));
+            }
+
+            return sb.toString();
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
 
