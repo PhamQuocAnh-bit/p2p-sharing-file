@@ -210,6 +210,8 @@ Cho phép:
 * chọn file
 * upload file
 * register với Tracker
+  <img width="1912" height="1017" alt="image" src="https://github.com/user-attachments/assets/8abb35da-4edd-40b8-a816-ed4568bb7310" />
+
 
 ---
 
@@ -221,6 +223,9 @@ Hiển thị:
 * chunk distribution
 * download chunk
 * download all
+
+  <img width="1048" height="538" alt="image" src="https://github.com/user-attachments/assets/97b2e373-5b91-48d9-b5cd-cbdcf2c078e1" />
+
 
 ---
 
@@ -234,6 +239,9 @@ Hiển thị:
 * verify MD5
 * merge file
 * retry peer
+
+  <img width="1061" height="308" alt="image" src="https://github.com/user-attachments/assets/50c36d12-95f1-4bb0-b5e9-bb4fe4c8d280" />
+
 
 ---
 
@@ -311,31 +319,4 @@ Dữ liệu file được truyền trực tiếp giữa các peer thông qua TCP
 * GUI trực quan
 * Multithreading
 
----
 
-# HẠN CHẾ HỆ THỐNG
-
-* Chưa hỗ trợ NAT Traversal
-* Chưa mã hóa dữ liệu
-* Tracker vẫn là điểm trung tâm
-* Chưa hỗ trợ resume download hoàn chỉnh
-
----
-
-# HƯỚNG PHÁT TRIỂN
-
-* Distributed Tracker
-* Resume download
-* Internet P2P
-* Mã hóa dữ liệu
-* Dynamic chunk balancing
-* Peer reputation system
-
----
-
-# THÀNH VIÊN THỰC HIỆN
-
-* Phạm Quốc Anh
-* Nguyễn Đức Khánh
-
-Học viện Công nghệ Bưu chính Viễn thông
