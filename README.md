@@ -89,6 +89,12 @@ Sau khi build:
 
 sẽ được tạo tự động.
 
+Nếu không build được dependencies thì chạy lệnh :
+
+```bash
+mvn dependency:copy-dependencies
+```
+
 ---
 
 # CHẠY HỆ THỐNG
