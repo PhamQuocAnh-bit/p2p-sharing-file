@@ -30,14 +30,6 @@ Hệ thống mô phỏng cơ chế hoạt động cơ bản của BitTorrent:
 
 ---
 
-# PHÂN CÔNG NHIỆM VỤ
-
-| TT | Công việc / Nhiệm vụ                                                                      | SV thực hiện     | Đóng góp |
-| -- | ----------------------------------------------------------------------------------------- | ---------------- | -------- |
-| 1  | Xây dựng peer-node, common, tracker, socket programming, multithreading, download service | Phạm Quốc Anh    | 60%      |
-| 2  | Xây dựng tracker, GUI, chunk distribution, verify MD5, retry mechanism                    | Nguyễn Đức Khánh | 40%      |
-
----
 
 # CÔNG NGHỆ SỬ DỤNG
 
